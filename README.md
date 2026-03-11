@@ -28,6 +28,7 @@ That makes a practical architecture look like this:
 This repository implements step 1 cleanly so step 2 can be added later without throwing away the MCP interface.
 
 For a direct map of MCP tools to wrapped JPO endpoints, see [docs/tool-coverage.md](./docs/tool-coverage.md).
+For contribution and maintenance guidance, see [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/repository-settings.md](./docs/repository-settings.md).
 
 ## Included Tools
 
