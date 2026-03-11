@@ -6,3 +6,7 @@ coverage/
 *.log
 api_reference.js
 access.pdf
+api-provision-moshikomi.docx
+application_email_body.txt
+国内特許情報取得API_利用申込書_*.docx
+scripts/fill_jpo_application.py

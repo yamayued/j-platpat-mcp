@@ -68,6 +68,30 @@ Official registration and documents:
 - [JPO API 情報提供サイト](https://ip-data.jpo.go.jp/pages/top.html)
 - [利用の手引き 第2.0版 PDF](https://www.jpo.go.jp/system/laws/sesaku/data/document/api-provision/api_handbook_v2.0.pdf)
 
+## 利用申請
+
+この MCP は J-PlatPat の画面をスクレイピングせず、特許庁の公式 `特許情報取得API` を使います。
+
+利用には、特許庁から発行される ID / パスワードが必要です。2026年3月11日時点では、特許庁の案内ページにある利用申込書を記入し、`PA0630@jpo.go.jp` へメール送付して申請します。
+
+申請案内:
+
+- [APIを利用した特許情報の試行提供](https://www.jpo.go.jp/system/laws/sesaku/data/api-provision.html)
+
+技術資料:
+
+- [API情報提供サイト](https://ip-data.jpo.go.jp/pages/top.html)
+- [API仕様書](https://ip-data.jpo.go.jp/api_guide/api_reference.html)
+- [利用の手引き 第2.0版 PDF](https://www.jpo.go.jp/system/laws/sesaku/data/document/api-provision/api_handbook_v2.0.pdf)
+
+認証まわりの要点:
+
+- トークン取得先は `https://ip-data.jpo.go.jp/auth/token`
+- `grant_type=password` でアクセストークン取得
+- `grant_type=refresh_token` でアクセストークン再取得
+- アクセストークンは 1 時間
+- リフレッシュトークンは 8 時間
+
 ## Setup
 
 Install dependencies:
@@ -113,6 +137,56 @@ Run the built server with local `.env` loading:
 ```bash
 npm run start:local
 ```
+
+## 動作確認
+
+ID / パスワード発行後は、まず `.env` を埋めてから起動します。
+
+```dotenv
+JPO_USERNAME=your-issued-id
+JPO_PASSWORD=your-issued-password
+```
+
+最初の確認としては、MCP を経由する前に JPO API 自体へログインできるかを見るのが確実です。
+
+PowerShell 例:
+
+```powershell
+$body = @{
+  grant_type = "password"
+  username = "your-issued-id"
+  password = "your-issued-password"
+}
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://ip-data.jpo.go.jp/auth/token" `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body $body
+```
+
+`access_token` が返れば認証成功です。
+
+その後、このリポジトリの MCP を起動します。
+
+```bash
+npm run dev:local
+```
+
+このサーバは次のような「番号が分かっている案件」の取得に向いています。
+
+- `get_patent_progress`
+- `get_patent_registration`
+- `get_trademark_progress`
+- `lookup_number_relation`
+
+例えば `get_patent_progress` では、10桁の出願番号を渡して公式 API の `patent/v1/app_progress/{出願番号}` を呼びます。
+
+## 利用上の注意
+
+このリポジトリは検索 UI の代替ではありません。公式 API は取得系が中心なので、自由語検索や探索的な検索は別途インデックス層を足す前提です。
+
+また、アクセス数は ID 単位で管理されるため、キャッシュと簡易レート制御を入れています。
 
 ## MCP Client Example
 
