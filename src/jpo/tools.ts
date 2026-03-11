@@ -15,6 +15,12 @@ const patentDocumentKindSchema = z.enum([
   "refusal_reason_decision"
 ]);
 
+const designDocumentKindSchema = z.enum([
+  "opinion_amendment",
+  "refusal_reason",
+  "refusal_reason_decision"
+]);
+
 const trademarkDocumentKindSchema = z.enum([
   "opinion_amendment",
   "refusal_reason",
@@ -28,12 +34,19 @@ const caseNumberReferenceTypeSchema = z.enum([
 ]);
 
 type PatentDocumentKind = z.infer<typeof patentDocumentKindSchema>;
+type DesignDocumentKind = z.infer<typeof designDocumentKindSchema>;
 type TrademarkDocumentKind = z.infer<typeof trademarkDocumentKindSchema>;
 
 const patentDocumentPathMap: Record<PatentDocumentKind, string> = {
   opinion_amendment: "/patent/v1/app_doc_cont_opinion_amendment/{applicationNumber}",
   refusal_reason: "/patent/v1/app_doc_cont_refusal_reason/{applicationNumber}",
   refusal_reason_decision: "/patent/v1/app_doc_cont_refusal_reason_decision/{applicationNumber}"
+};
+
+const designDocumentPathMap: Record<DesignDocumentKind, string> = {
+  opinion_amendment: "/design/v1/app_doc_cont_opinion_amendment/{applicationNumber}",
+  refusal_reason: "/design/v1/app_doc_cont_refusal_reason/{applicationNumber}",
+  refusal_reason_decision: "/design/v1/app_doc_cont_refusal_reason_decision/{applicationNumber}"
 };
 
 const trademarkDocumentPathMap: Record<TrademarkDocumentKind, string> = {
@@ -142,6 +155,67 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       buildToolResult(
         "get_patent_registration",
         `/patent/v1/registration_info/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_design_progress",
+    {
+      title: "Get Design Progress",
+      description: "Fetch design prosecution progress from the official JPO API.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_design_progress",
+        `/design/v1/app_progress/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_design_registration",
+    {
+      title: "Get Design Registration",
+      description: "Fetch design registration information from the official JPO API.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_design_registration",
+        `/design/v1/registration_info/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_design_documents",
+    {
+      title: "Get Design Documents",
+      description: "Fetch design application document bundles such as amendment, refusal reason, and decision packages.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号"),
+        documentKind: designDocumentKindSchema.describe("取得したい文書群")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber, documentKind }) =>
+      buildToolResult(
+        "get_design_documents",
+        designDocumentPathMap[documentKind].replace("{applicationNumber}", applicationNumber),
         client
       )
   );

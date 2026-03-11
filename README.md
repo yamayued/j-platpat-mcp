@@ -27,6 +27,8 @@ That makes a practical architecture look like this:
 
 This repository implements step 1 cleanly so step 2 can be added later without throwing away the MCP interface.
 
+For a direct map of MCP tools to wrapped JPO endpoints, see [docs/tool-coverage.md](./docs/tool-coverage.md).
+
 ## Included Tools
 
 The current scaffold exposes these MCP tools:
@@ -36,6 +38,9 @@ The current scaffold exposes these MCP tools:
 - `get_patent_citations`
 - `get_patent_documents`
 - `get_patent_registration`
+- `get_design_progress`
+- `get_design_registration`
+- `get_design_documents`
 - `get_trademark_progress`
 - `get_trademark_registration`
 - `get_trademark_documents`
@@ -54,6 +59,7 @@ The document tools map the official split endpoints into one MCP tool with a `do
 - Automatic bearer token handling
 - In-memory cache for repeated reads
 - Simple minimum-interval throttling per process
+- Mock smoke test for auth / retry / cache behavior without live JPO credentials
 - TypeScript + current MCP TypeScript SDK scaffold
 
 ## Requirements
@@ -132,6 +138,12 @@ Build for production:
 npm run build
 ```
 
+Run the mock smoke test without real JPO credentials:
+
+```bash
+npm run test:mock
+```
+
 Run the built server with local `.env` loading:
 
 ```bash
@@ -176,7 +188,9 @@ npm run dev:local
 このサーバは次のような「番号が分かっている案件」の取得に向いています。
 
 - `get_patent_progress`
+- `get_design_progress`
 - `get_patent_registration`
+- `get_design_registration`
 - `get_trademark_progress`
 - `lookup_number_relation`
 
@@ -229,7 +243,6 @@ If you plan to publish a third-party SaaS or multi-tenant service, review the JP
 
 - No bulk-data ingestion layer yet
 - No free-text search index yet
-- No design-specific MCP retrieval tools yet, although shared tools already support `design` where the official API does
 - No fixture-based tests yet
 
 ## Roadmap

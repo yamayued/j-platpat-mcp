@@ -6,6 +6,17 @@
   "private": false,
   "license": "MIT",
   "author": "yamayued",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "j-platpat-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "AGENTS.md"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/yamayued/j-platpat-mcp.git"
@@ -31,6 +42,8 @@
     "check": "tsc --noEmit -p tsconfig.json",
     "dev": "node --enable-source-maps --loader tsx src/index.ts",
     "dev:local": "node --enable-source-maps --env-file=.env --loader tsx src/index.ts",
+    "test:mock": "npm run build && node --enable-source-maps scripts/mock-smoke-test.mjs",
+    "prepack": "npm run build",
     "start": "node --enable-source-maps dist/index.js",
     "start:local": "node --enable-source-maps --env-file=.env dist/index.js"
   },
