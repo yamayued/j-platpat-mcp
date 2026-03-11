@@ -1,0 +1,46 @@
+{
+  "name": "j-platpat-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for the official JPO patent information acquisition API.",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "author": "yamayued",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yamayued/j-platpat-mcp.git"
+  },
+  "homepage": "https://github.com/yamayued/j-platpat-mcp",
+  "bugs": {
+    "url": "https://github.com/yamayued/j-platpat-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "jpo",
+    "j-platpat",
+    "patent",
+    "trademark",
+    "japan"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "dev": "node --enable-source-maps --loader tsx src/index.ts",
+    "dev:local": "node --enable-source-maps --env-file=.env --loader tsx src/index.ts",
+    "start": "node --enable-source-maps dist/index.js",
+    "start:local": "node --enable-source-maps --env-file=.env dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
