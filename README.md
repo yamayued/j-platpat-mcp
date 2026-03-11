@@ -62,6 +62,17 @@ The document tools map the official split endpoints into one MCP tool with a `do
 - Mock smoke test for auth / retry / cache behavior without live JPO credentials
 - TypeScript + current MCP TypeScript SDK scaffold
 
+## Practical Use Cases
+
+This server is most useful after a person has already identified a target case and wants to retrieve official records quickly.
+
+- Patent or trademark teams checking prosecution progress for a known application number
+- Attorney or paralegal workflows that need registration details and official document bundles
+- Internal tools that want a stable J-PlatPat permalink for case handoff or record review
+- Applicant-name or applicant-code resolution before pulling detailed case data
+
+In other words, this repository is realistic as a retrieval MCP for known cases. It is not yet a replacement for exploratory prior-art search or similar-mark search.
+
 ## Requirements
 
 - Node.js 20+
@@ -143,6 +154,14 @@ Run the mock smoke test without real JPO credentials:
 ```bash
 npm run test:mock
 ```
+
+What this verifies today:
+
+- password-grant login
+- refresh-token re-authentication
+- bearer-token attachment on API calls
+- one retry after `401`
+- cache hits on repeated reads
 
 Run the built server with local `.env` loading:
 
@@ -244,6 +263,23 @@ If you plan to publish a third-party SaaS or multi-tenant service, review the JP
 - No bulk-data ingestion layer yet
 - No free-text search index yet
 - No fixture-based tests yet
+- No live verification against a JPO-issued production account in this repository
+
+## Validation Status
+
+What has been validated locally:
+
+- `npm run check`
+- `npm run build`
+- `npm run test:mock`
+- stdio MCP startup with missing-env failure behavior
+
+What still needs a real JPO account:
+
+- live `/auth/token` verification
+- response-shape confirmation against production data
+- access-count behavior under real usage
+- end-to-end checks for each wrapped endpoint
 
 ## Roadmap
 
