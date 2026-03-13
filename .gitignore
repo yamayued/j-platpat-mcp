@@ -2,8 +2,10 @@ node_modules/
 dist/
 .env
 .env.local
+.env.t
 coverage/
 *.log
+temp-*.mjs
 api_reference.js
 access.pdf
 api-provision-moshikomi.docx

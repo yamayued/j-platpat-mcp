@@ -3,6 +3,7 @@
 `j-platpat-mcp` is a public MCP server scaffold for the official JPO patent information acquisition API (`特許情報取得API`).
 
 This repository intentionally wraps the official API layer and does not scrape the J-PlatPat web UI.
+It also does not use unofficial Google Patents scraping or fallback endpoints.
 
 ## What This Repo Is
 
@@ -14,6 +15,7 @@ This repository intentionally wraps the official API layer and does not scrape t
 
 - Not a J-PlatPat browser automation project.
 - Not a full-text patent search engine.
+- Not a Google Patents scraper or metadata enrichment proxy.
 - Not a substitute for reading and complying with the JPO / INPIT terms of use.
 
 ## Why This Shape
@@ -158,6 +160,10 @@ Run in development:
 npm run dev:local
 ```
 
+`dev:local` and `start:local` will load `.env` from the repository root when present, and otherwise continue with the current process environment.
+
+If credentials are not configured, the server can still start and expose tool metadata, but JPO-backed tool calls will return a clear configuration error instead of failing during startup.
+
 Build for production:
 
 ```bash
@@ -170,11 +176,51 @@ Run the mock smoke test without real JPO credentials:
 npm run test:mock
 ```
 
+Run an MCP-level smoke test that validates tool registration and publication-number normalization without real JPO credentials:
+
+```bash
+npm run test:mcp
+```
+
+Run a smoke test that verifies the server still starts without credentials and returns a deterministic configuration error on JPO API calls:
+
+```bash
+npm run test:no-credentials
+```
+
 Run endpoint parity check against `api_reference.js`:
 
 ```bash
 npm run check:coverage
 ```
+
+Run parity check against both local and official `api_reference.js`:
+
+```bash
+npm run check:api-parity:remote
+```
+
+Run parity check against official reference and create a GitHub issue when drift is found:
+
+```bash
+npm run check:api-parity:remote:issue
+```
+
+If API coverage drift is detected and you want to automatically open a GitHub issue (when running in CI with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`), run:
+
+```bash
+node scripts/check-api-parity.mjs --create-issue
+```
+
+In this mode, the check generates a stable drift fingerprint and skips creating a duplicate issue when an open issue with the same fingerprint already exists.
+
+To verify the local `api_reference.js` against the latest official JPO guide reference:
+
+```bash
+node scripts/check-api-parity.mjs --check-remote
+```
+
+(`--check-remote` can be combined with `--create-issue` when run in CI with credentials.)
 
 What this verifies today:
 
@@ -273,6 +319,7 @@ Most MCP clients want explicit environment variables in their config. Example:
 ## Compliance Notes
 
 - This repository is designed around the official JPO API, not J-PlatPat screen scraping.
+- Unofficial J-PlatPat session endpoints and Google Patents scraping paths are intentionally out of scope for this server.
 - You must obtain credentials and follow the API terms and handbook.
 - Access counts are managed per ID, so cache and rate control are enabled by default.
 - `resolve_applicant_code` uses exact-match applicant names because that is how the official endpoint works.
@@ -295,8 +342,10 @@ What has been validated locally:
 - `npm run check`
 - `npm run build`
 - `npm run test:mock`
+- `npm run test:mcp`
+- `npm run test:no-credentials`
 - `npm run check:coverage`
-- stdio MCP startup with missing-env failure behavior
+- stdio MCP startup with and without configured JPO credentials
 
 What still needs a real JPO account:
 

@@ -41,14 +41,18 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
     "check:api-parity": "node scripts/check-api-parity.mjs",
-    "dev": "node --enable-source-maps --loader tsx src/index.ts",
-    "dev:local": "node --enable-source-maps --env-file=.env --loader tsx src/index.ts",
+    "check:api-parity:remote": "node scripts/check-api-parity.mjs --check-remote",
+    "check:api-parity:remote:issue": "node scripts/check-api-parity.mjs --check-remote --create-issue",
+    "dev": "node --enable-source-maps --import tsx src/index.ts",
+    "dev:local": "node --enable-source-maps --import tsx src/index.ts",
+    "test:no-credentials": "npm run build && node --enable-source-maps scripts/missing-credentials-smoke-test.mjs",
+    "test:mcp": "npm run build && node --enable-source-maps scripts/mcp-tool-smoke-test.mjs",
     "test:mock": "npm run build && node --enable-source-maps scripts/mock-smoke-test.mjs",
     "check:coverage": "npm run check:api-parity",
     "prepare": "npm run build",
     "prepack": "npm run build",
     "start": "node --enable-source-maps dist/index.js",
-    "start:local": "node --enable-source-maps --env-file=.env dist/index.js"
+    "start:local": "node --enable-source-maps dist/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",

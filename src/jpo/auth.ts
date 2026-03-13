@@ -76,6 +76,12 @@ export class JpoTokenManager {
   }
 
   private async loginWithPasswordGrant(): Promise<string> {
+    if (!this.config.username || !this.config.password) {
+      throw new Error(
+        "JPO API credentials are not configured. Set JPO_USERNAME and JPO_PASSWORD to use official JPO API tools."
+      );
+    }
+
     const payload = new URLSearchParams({
       grant_type: "password",
       username: this.config.username,

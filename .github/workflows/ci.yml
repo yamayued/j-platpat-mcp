@@ -5,10 +5,15 @@ on:
     branches:
       - main
   pull_request:
+  schedule:
+    - cron: "0 0 * * 1"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout
@@ -27,7 +32,17 @@ jobs:
         run: npm run check
 
       - name: API parity check
-        run: npm run check:coverage
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            npm run check:api-parity:remote:issue
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            npm run check:api-parity:remote:issue
+          else
+            npm run check:api-parity:remote
+          fi
 
       - name: Mock smoke test
         run: npm run test:mock

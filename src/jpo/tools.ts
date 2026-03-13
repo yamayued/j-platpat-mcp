@@ -10,15 +10,24 @@ const applicationNumberSchema = z.string().regex(
   "Application number must be 10 digits."
 );
 const numberStringSchema = z.string().min(1).describe("Case number string.");
-const applicantCodeSchema = z.string().regex(/^[0-9]{9}$/, "Applicant code must be 9 digits.");
-const domainSchema = z.enum(["patent", "design", "trademark"]);
-const relationSchema = z.enum(["application", "publication", "registration"]);
-const documentIdSchema = z.string().min(1).describe("Document id.");
-const caseNumberReferenceTypeSchema = z.enum([
+const patentCaseNumberReferenceTypeSchema = z.enum([
   "application",
   "publication",
   "registration"
 ]);
+const nonPatentCaseNumberReferenceTypeSchema = z.enum([
+  "application",
+  "registration"
+]);
+const publicationNumberSchema = z.string().min(1).refine(
+  (value) => isPublicationNumber(value),
+  "Publication-like patent identifier. Accepts JP.12345678.A and JP12345678A."
+);
+const applicantCodeSchema = z.string().regex(/^[0-9]{9}$/, "Applicant code must be 9 digits.");
+const domainSchema = z.enum(["patent", "design", "trademark"]);
+const familyRelationTypeSchema = z.enum(["application", "publication"]);
+const pctRelationTypeSchema = z.enum(["international_application", "international_publication"]);
+const documentIdSchema = z.string().min(1).describe("Document id.");
 
 const patentDocumentKindSchema = z.enum([
   "opinion_amendment",
@@ -68,19 +77,24 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       description: "Resolve official case number relationships from the JPO case number reference API.",
       inputSchema: {
         domain: domainSchema.describe("patent / design / trademark"),
-        relationType: caseNumberReferenceTypeSchema.describe("application / publication / registration"),
+        relationType: z.union([patentCaseNumberReferenceTypeSchema, nonPatentCaseNumberReferenceTypeSchema]).describe("application / publication / registration"),
         caseNumber: numberStringSchema.describe("Case number")
       },
       annotations: {
         readOnlyHint: true
       }
     },
-    async ({ domain, relationType, caseNumber }) =>
-      buildToolResult(
+    async ({ domain, relationType, caseNumber }) => {
+      if (domain !== "patent" && relationType === "publication") {
+        throw new Error("For design/trademark, case number reference relationType only supports application or registration.");
+      }
+
+      return buildToolResult(
         "lookup_number_relation",
         `/${domain}/v1/case_number_reference/${relationType}/${encodeSegment(caseNumber)}`,
         client
-      )
+      );
+    }
   );
 
   server.registerTool(
@@ -230,8 +244,8 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Family",
       description: "Fetch patent family record by case number.",
       inputSchema: {
-        relation: relationSchema.describe("application / publication / registration"),
-        caseNumber: numberStringSchema.describe("Case number")
+        relation: familyRelationTypeSchema.describe("application / publication"),
+        caseNumber: numberStringSchema.describe("Application or publication number")
       },
       annotations: {
         readOnlyHint: true
@@ -240,7 +254,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
     async ({ relation, caseNumber }) =>
       buildToolResult(
         "get_patent_family",
-        `/patent/v1/family/${relation}/${encodeSegment(caseNumber)}`,
+        `/patent/v1/family/${relation}/${encodeSegment(normalizeFamilyCaseNumber(relation, caseNumber))}`,
         client
       )
   );
@@ -251,8 +265,8 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Family List",
       description: "Fetch patent family list by case number.",
       inputSchema: {
-        relation: relationSchema.describe("application / publication / registration"),
-        caseNumber: numberStringSchema.describe("Case number")
+        relation: familyRelationTypeSchema.describe("application / publication"),
+        caseNumber: numberStringSchema.describe("Application or publication number")
       },
       annotations: {
         readOnlyHint: true
@@ -261,7 +275,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
     async ({ relation, caseNumber }) =>
       buildToolResult(
         "get_patent_family_list",
-        `/patent/v1/family_list/${relation}/${encodeSegment(caseNumber)}`,
+        `/patent/v1/family_list/${relation}/${encodeSegment(normalizeFamilyCaseNumber(relation, caseNumber))}`,
         client
       )
   );
@@ -272,7 +286,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Global Citation Class",
       description: "Fetch patent global citation class information.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+        applicationNumber: publicationNumberSchema.describe("Patent publication number like JP.12345678.A")
       },
       annotations: {
         readOnlyHint: true
@@ -281,7 +295,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
     async ({ applicationNumber }) =>
       buildToolResult(
         "get_patent_global_cite_class",
-        `/patent/v1/global_cite_class/${applicationNumber}`,
+        `/patent/v1/global_cite_class/${normalizePublicationNumber(applicationNumber)}`,
         client
       )
   );
@@ -292,7 +306,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Global Document List",
       description: "Fetch patent global document list.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+        applicationNumber: publicationNumberSchema.describe("Patent publication number like JP.12345678.A")
       },
       annotations: {
         readOnlyHint: true
@@ -301,7 +315,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
     async ({ applicationNumber }) =>
       buildToolResult(
         "get_patent_global_doc_list",
-        `/patent/v1/global_doc_list/${applicationNumber}`,
+        `/patent/v1/global_doc_list/${normalizePublicationNumber(applicationNumber)}`,
         client
       )
   );
@@ -312,7 +326,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Global Document",
       description: "Fetch one patent global document by document ID.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)"),
+        applicationNumber: publicationNumberSchema.describe("Patent publication number like JP.12345678.A"),
         documentId: documentIdSchema
       },
       annotations: {
@@ -322,7 +336,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
     async ({ applicationNumber, documentId }) =>
       buildToolResult(
         "get_patent_global_document",
-        `/patent/v1/global_doc_cont/${encodeSegment(applicationNumber)}/${encodeSegment(documentId)}`,
+        `/patent/v1/global_doc_cont/${encodeSegment(normalizePublicationNumber(applicationNumber))}/${encodeSegment(documentId)}`,
         client
       )
   );
@@ -333,7 +347,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Japan Document",
       description: "Fetch one patent Japan document by document ID.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)"),
+        applicationNumber: publicationNumberSchema.describe("Patent publication number like JP.12345678.A"),
         documentId: documentIdSchema
       },
       annotations: {
@@ -343,7 +357,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
     async ({ applicationNumber, documentId }) =>
       buildToolResult(
         "get_patent_jp_document",
-        `/patent/v1/jp_doc_cont/${encodeSegment(applicationNumber)}/${encodeSegment(documentId)}`,
+        `/patent/v1/jp_doc_cont/${encodeSegment(normalizePublicationNumber(applicationNumber))}/${encodeSegment(documentId)}`,
         client
       )
   );
@@ -354,7 +368,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent PCT National Phase Number",
       description: "Resolve PCT national phase application number.",
       inputSchema: {
-        relation: relationSchema.describe("application / publication / registration"),
+        relation: pctRelationTypeSchema.describe("international_application / international_publication"),
         caseNumber: numberStringSchema.describe("Case number")
       },
       annotations: {
@@ -671,6 +685,38 @@ async function buildToolResult(
 
 function encodeSegment(value: string): string {
   return encodeURIComponent(value);
+}
+
+function isPublicationNumber(value: string): boolean {
+  try {
+    normalizePublicationNumber(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeFamilyCaseNumber(relation: z.infer<typeof familyRelationTypeSchema>, value: string): string {
+  return relation === "publication" ? normalizePublicationNumber(value) : value;
+}
+
+function normalizePublicationNumber(value: string): string {
+  const trimmed = value.trim();
+  const dotted = trimmed.toUpperCase();
+
+  if (/^[A-Z]{2}\.[0-9]{1,94}\.[A-Z0-9*]{1,2}$/.test(dotted)) {
+    return dotted;
+  }
+
+  const compact = dotted.replace(/[.\s-]+/g, "");
+  const match = compact.match(/^([A-Z]{2})([0-9]{1,94})([A-Z0-9*]{1,2})$/);
+
+  if (!match) {
+    throw new Error("Publication-like patent identifier. Accepts JP.12345678.A and JP12345678A.");
+  }
+
+  const [, country, number, kind] = match;
+  return `${country}.${number}.${kind}`;
 }
 
 function safeStringify(value: JpoApiResponse): string {
