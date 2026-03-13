@@ -100,7 +100,7 @@ export class JpoClient {
       throw new Error(`JPO API request failed (${response.status}): ${text}`);
     }
 
-    return (await response.json()) as JpoApiResponse;
+    return parseJsonResponse<JpoApiResponse>(response, "JPO API request");
   }
 }
 
@@ -110,4 +110,30 @@ async function safeReadText(response: Response): Promise<string> {
   } catch {
     return "Unable to read response body.";
   }
+}
+
+async function parseJsonResponse<T>(response: Response, sourceLabel: string): Promise<T> {
+  const text = await safeReadText(response);
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    const contentType = response.headers.get("content-type") || "unknown";
+    const preview = buildBodyPreview(text);
+    throw new Error(
+      `${sourceLabel} returned non-JSON response (${response.status}, content-type: ${contentType}): ${preview}`
+    );
+  }
+}
+
+function buildBodyPreview(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return "empty response body";
+  }
+
+  return normalized.length > 200
+    ? `${normalized.slice(0, 200)}...`
+    : normalized;
 }

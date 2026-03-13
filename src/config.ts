@@ -63,7 +63,9 @@ function loadDotEnvIfPresent(): void {
   }
 
   const raw = fs.readFileSync(envPath, "utf8");
-  for (const line of raw.split(/\r?\n/)) {
+  const normalizedRaw = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
+
+  for (const line of normalizedRaw.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
       continue;
@@ -105,16 +107,42 @@ export function loadConfig(): AppConfig {
   const baseUrl = trimTrailingSlash(process.env.JPO_BASE_URL?.trim() || "https://ip-data.jpo.go.jp");
   const apiBasePath = process.env.JPO_API_BASE_PATH?.trim() || "/api";
   const authPath = process.env.JPO_AUTH_PATH?.trim() || "/auth/token";
+  const normalizedApiBasePath = apiBasePath.startsWith("/") ? apiBasePath : `/${apiBasePath}`;
+  const normalizedAuthPath = authPath.startsWith("/") ? authPath : `/${authPath}`;
+
+  validateUrlConfig(baseUrl, normalizedApiBasePath, normalizedAuthPath);
 
   return {
     username: readOptionalEnv("JPO_USERNAME"),
     password: readOptionalEnv("JPO_PASSWORD"),
     baseUrl,
-    apiBasePath: apiBasePath.startsWith("/") ? apiBasePath : `/${apiBasePath}`,
-    authPath: authPath.startsWith("/") ? authPath : `/${authPath}`,
+    apiBasePath: normalizedApiBasePath,
+    authPath: normalizedAuthPath,
     userAgent: process.env.JPO_USER_AGENT?.trim() || "j-platpat-mcp/0.1.0",
     cacheTtlMs: readOptionalNumber("JPO_CACHE_TTL_MS", 5 * 60 * 1000),
     minIntervalMs: readOptionalNumber("JPO_MIN_INTERVAL_MS", 250),
     requestTimeoutMs: readOptionalNumber("JPO_REQUEST_TIMEOUT_MS", 30 * 1000)
   };
+}
+
+function validateUrlConfig(baseUrl: string, apiBasePath: string, authPath: string): void {
+  let parsedBaseUrl: URL;
+
+  try {
+    parsedBaseUrl = new URL(baseUrl);
+  } catch {
+    throw new Error(`JPO_BASE_URL must be a valid absolute URL. Received: ${baseUrl}`);
+  }
+
+  try {
+    new URL(apiBasePath, parsedBaseUrl);
+  } catch {
+    throw new Error(`JPO_API_BASE_PATH must be a valid URL path. Received: ${apiBasePath}`);
+  }
+
+  try {
+    new URL(authPath, parsedBaseUrl);
+  } catch {
+    throw new Error(`JPO_AUTH_PATH must be a valid URL path. Received: ${authPath}`);
+  }
 }

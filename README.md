@@ -161,8 +161,10 @@ npm run dev:local
 ```
 
 `dev:local` and `start:local` will load `.env` from the repository root when present, and otherwise continue with the current process environment.
+The built-in `.env` loader accepts common UTF-8 `.env` files, including files with a UTF-8 BOM from Windows editors.
 
 If credentials are not configured, the server can still start and expose tool metadata, but JPO-backed tool calls will return a clear configuration error instead of failing during startup.
+Invalid `JPO_BASE_URL`, `JPO_API_BASE_PATH`, or `JPO_AUTH_PATH` values now fail fast during startup with a configuration message.
 
 Build for production:
 
@@ -186,6 +188,18 @@ Run a smoke test that verifies the server still starts without credentials and r
 
 ```bash
 npm run test:no-credentials
+```
+
+Run config validation checks for URL settings and UTF-8 BOM `.env` handling:
+
+```bash
+npm run test:config
+```
+
+Run non-JSON response checks for auth/API endpoints:
+
+```bash
+npm run test:non-json
 ```
 
 Run endpoint parity check against `api_reference.js`:
@@ -344,6 +358,8 @@ What has been validated locally:
 - `npm run test:mock`
 - `npm run test:mcp`
 - `npm run test:no-credentials`
+- `npm run test:config`
+- `npm run test:non-json`
 - `npm run check:coverage`
 - stdio MCP startup with and without configured JPO credentials
 

@@ -92,8 +92,9 @@ export class JpoTokenManager {
   }
 
   private async issueToken(payload: URLSearchParams): Promise<string> {
+    const url = new URL(this.config.authPath, this.config.baseUrl);
     const response = await this.fetchWithTimeout(
-      new URL(this.config.authPath, this.config.baseUrl),
+      url,
       {
         method: "POST",
         headers: {
@@ -109,7 +110,7 @@ export class JpoTokenManager {
       throw new Error(`JPO auth failed (${response.status}): ${details}`);
     }
 
-    const json = (await response.json()) as JpoTokenResponse;
+    const json = await parseJsonResponse<JpoTokenResponse>(response, "JPO auth", url);
 
     if (!json.access_token || !json.refresh_token) {
       throw new Error("JPO auth response did not include access_token and refresh_token.");
@@ -159,4 +160,30 @@ async function safeReadText(response: Response): Promise<string> {
   } catch {
     return "Unable to read response body.";
   }
+}
+
+async function parseJsonResponse<T>(response: Response, sourceLabel: string, url: URL): Promise<T> {
+  const text = await safeReadText(response);
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    const contentType = response.headers.get("content-type") || "unknown";
+    const preview = buildBodyPreview(text);
+    throw new Error(
+      `${sourceLabel} returned non-JSON response (${response.status}, content-type: ${contentType}, url: ${url.toString()}): ${preview}`
+    );
+  }
+}
+
+function buildBodyPreview(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return "empty response body";
+  }
+
+  return normalized.length > 200
+    ? `${normalized.slice(0, 200)}...`
+    : normalized;
 }
