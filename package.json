@@ -40,9 +40,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
+    "check:api-parity": "node scripts/check-api-parity.mjs",
     "dev": "node --enable-source-maps --loader tsx src/index.ts",
     "dev:local": "node --enable-source-maps --env-file=.env --loader tsx src/index.ts",
     "test:mock": "npm run build && node --enable-source-maps scripts/mock-smoke-test.mjs",
+    "check:coverage": "npm run check:api-parity",
     "prepare": "npm run build",
     "prepack": "npm run build",
     "start": "node --enable-source-maps dist/index.js",

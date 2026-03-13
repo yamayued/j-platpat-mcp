@@ -170,6 +170,12 @@ Run the mock smoke test without real JPO credentials:
 npm run test:mock
 ```
 
+Run endpoint parity check against `api_reference.js`:
+
+```bash
+npm run check:coverage
+```
+
 What this verifies today:
 
 - password-grant login
@@ -289,6 +295,7 @@ What has been validated locally:
 - `npm run check`
 - `npm run build`
 - `npm run test:mock`
+- `npm run check:coverage`
 - stdio MCP startup with missing-env failure behavior
 
 What still needs a real JPO account:
