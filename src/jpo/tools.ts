@@ -5,9 +5,20 @@ import type { JpoApiResponse } from "./types.js";
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-const applicationNumberSchema = z.string().regex(/^[0-9]{10}$/, "10桁の出願番号を指定してください。");
-const applicantCodeSchema = z.string().regex(/^[0-9]{9}$/, "9桁の申請人コードを指定してください。");
+const applicationNumberSchema = z.string().regex(
+  /^[0-9]{10}$/,
+  "Application number must be 10 digits."
+);
+const numberStringSchema = z.string().min(1).describe("Case number string.");
+const applicantCodeSchema = z.string().regex(/^[0-9]{9}$/, "Applicant code must be 9 digits.");
 const domainSchema = z.enum(["patent", "design", "trademark"]);
+const relationSchema = z.enum(["application", "publication", "registration"]);
+const documentIdSchema = z.string().min(1).describe("Document id.");
+const caseNumberReferenceTypeSchema = z.enum([
+  "application",
+  "publication",
+  "registration"
+]);
 
 const patentDocumentKindSchema = z.enum([
   "opinion_amendment",
@@ -25,12 +36,6 @@ const trademarkDocumentKindSchema = z.enum([
   "opinion_amendment",
   "refusal_reason",
   "refusal_reason_decision"
-]);
-
-const caseNumberReferenceTypeSchema = z.enum([
-  "application",
-  "publication",
-  "registration"
 ]);
 
 type PatentDocumentKind = z.infer<typeof patentDocumentKindSchema>;
@@ -62,9 +67,9 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Lookup Number Relation",
       description: "Resolve official case number relationships from the JPO case number reference API.",
       inputSchema: {
-        domain: domainSchema.describe("対象ドメイン: patent / design / trademark"),
-        relationType: caseNumberReferenceTypeSchema.describe("案件番号の種別: application / publication / registration"),
-        caseNumber: z.string().min(1).describe("参照したい案件番号")
+        domain: domainSchema.describe("patent / design / trademark"),
+        relationType: caseNumberReferenceTypeSchema.describe("application / publication / registration"),
+        caseNumber: numberStringSchema.describe("Case number")
       },
       annotations: {
         readOnlyHint: true
@@ -84,7 +89,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Progress",
       description: "Fetch patent prosecution progress from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -99,12 +104,32 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
   );
 
   server.registerTool(
+    "get_patent_progress_simple",
+    {
+      title: "Get Patent Progress (Simple)",
+      description: "Fetch compact patent prosecution progress from the official JPO API.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_patent_progress_simple",
+        `/patent/v1/app_progress_simple/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
     "get_patent_citations",
     {
       title: "Get Patent Citations",
       description: "Fetch cited document information for a patent application from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -124,8 +149,8 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Documents",
       description: "Fetch patent application document bundles such as amendment, refusal reason, and decision packages.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号"),
-        documentKind: patentDocumentKindSchema.describe("取得したい文書群")
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)"),
+        documentKind: patentDocumentKindSchema.describe("one of: opinion_amendment, refusal_reason, refusal_reason_decision")
       },
       annotations: {
         readOnlyHint: true
@@ -145,7 +170,7 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Patent Registration",
       description: "Fetch patent registration information from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -160,12 +185,197 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
   );
 
   server.registerTool(
+    "get_patent_priority_right_app_info",
+    {
+      title: "Get Patent Priority Right Information",
+      description: "Fetch patent priority-right information.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_patent_priority_right_app_info",
+        `/patent/v1/priority_right_app_info/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_divisional_app_info",
+    {
+      title: "Get Patent Divisional Application Information",
+      description: "Fetch patent divisional-application information.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_patent_divisional_app_info",
+        `/patent/v1/divisional_app_info/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_family",
+    {
+      title: "Get Patent Family",
+      description: "Fetch patent family record by case number.",
+      inputSchema: {
+        relation: relationSchema.describe("application / publication / registration"),
+        caseNumber: numberStringSchema.describe("Case number")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ relation, caseNumber }) =>
+      buildToolResult(
+        "get_patent_family",
+        `/patent/v1/family/${relation}/${encodeSegment(caseNumber)}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_family_list",
+    {
+      title: "Get Patent Family List",
+      description: "Fetch patent family list by case number.",
+      inputSchema: {
+        relation: relationSchema.describe("application / publication / registration"),
+        caseNumber: numberStringSchema.describe("Case number")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ relation, caseNumber }) =>
+      buildToolResult(
+        "get_patent_family_list",
+        `/patent/v1/family_list/${relation}/${encodeSegment(caseNumber)}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_global_cite_class",
+    {
+      title: "Get Patent Global Citation Class",
+      description: "Fetch patent global citation class information.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_patent_global_cite_class",
+        `/patent/v1/global_cite_class/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_global_doc_list",
+    {
+      title: "Get Patent Global Document List",
+      description: "Fetch patent global document list.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_patent_global_doc_list",
+        `/patent/v1/global_doc_list/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_global_document",
+    {
+      title: "Get Patent Global Document",
+      description: "Fetch one patent global document by document ID.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)"),
+        documentId: documentIdSchema
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber, documentId }) =>
+      buildToolResult(
+        "get_patent_global_document",
+        `/patent/v1/global_doc_cont/${encodeSegment(applicationNumber)}/${encodeSegment(documentId)}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_jp_document",
+    {
+      title: "Get Patent Japan Document",
+      description: "Fetch one patent Japan document by document ID.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan patent application number (10 digits)"),
+        documentId: documentIdSchema
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber, documentId }) =>
+      buildToolResult(
+        "get_patent_jp_document",
+        `/patent/v1/jp_doc_cont/${encodeSegment(applicationNumber)}/${encodeSegment(documentId)}`,
+        client
+      )
+  );
+
+  server.registerTool(
+    "get_patent_pct_national_phase_application_number",
+    {
+      title: "Get Patent PCT National Phase Number",
+      description: "Resolve PCT national phase application number.",
+      inputSchema: {
+        relation: relationSchema.describe("application / publication / registration"),
+        caseNumber: numberStringSchema.describe("Case number")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ relation, caseNumber }) =>
+      buildToolResult(
+        "get_patent_pct_national_phase_application_number",
+        `/patent/v1/pct_national_phase_application_number/${relation}/${encodeSegment(caseNumber)}`,
+        client
+      )
+  );
+
+  server.registerTool(
     "get_design_progress",
     {
       title: "Get Design Progress",
       description: "Fetch design prosecution progress from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan design application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -180,12 +390,32 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
   );
 
   server.registerTool(
+    "get_design_progress_simple",
+    {
+      title: "Get Design Progress (Simple)",
+      description: "Fetch compact design prosecution progress from the official JPO API.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan design application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_design_progress_simple",
+        `/design/v1/app_progress_simple/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
     "get_design_registration",
     {
       title: "Get Design Registration",
       description: "Fetch design registration information from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan design application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -205,8 +435,8 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Design Documents",
       description: "Fetch design application document bundles such as amendment, refusal reason, and decision packages.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号"),
-        documentKind: designDocumentKindSchema.describe("取得したい文書群")
+        applicationNumber: applicationNumberSchema.describe("Japan design application number (10 digits)"),
+        documentKind: designDocumentKindSchema.describe("one of: opinion_amendment, refusal_reason, refusal_reason_decision")
       },
       annotations: {
         readOnlyHint: true
@@ -221,12 +451,32 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
   );
 
   server.registerTool(
+    "get_design_priority_right_app_info",
+    {
+      title: "Get Design Priority Right Information",
+      description: "Fetch design priority-right information.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan design application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_design_priority_right_app_info",
+        `/design/v1/priority_right_app_info/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
     "get_trademark_progress",
     {
       title: "Get Trademark Progress",
       description: "Fetch trademark prosecution progress from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan trademark application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -241,12 +491,32 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
   );
 
   server.registerTool(
+    "get_trademark_progress_simple",
+    {
+      title: "Get Trademark Progress (Simple)",
+      description: "Fetch compact trademark prosecution progress from the official JPO API.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan trademark application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_trademark_progress_simple",
+        `/trademark/v1/app_progress_simple/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
     "get_trademark_registration",
     {
       title: "Get Trademark Registration",
       description: "Fetch trademark registration information from the official JPO API.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        applicationNumber: applicationNumberSchema.describe("Japan trademark application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true
@@ -266,8 +536,8 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get Trademark Documents",
       description: "Fetch trademark application document bundles such as amendment, refusal reason, and decision packages.",
       inputSchema: {
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号"),
-        documentKind: trademarkDocumentKindSchema.describe("取得したい文書群")
+        applicationNumber: applicationNumberSchema.describe("Japan trademark application number (10 digits)"),
+        documentKind: trademarkDocumentKindSchema.describe("one of: opinion_amendment, refusal_reason, refusal_reason_decision")
       },
       annotations: {
         readOnlyHint: true
@@ -282,14 +552,34 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
   );
 
   server.registerTool(
+    "get_trademark_priority_right_app_info",
+    {
+      title: "Get Trademark Priority Right Information",
+      description: "Fetch trademark priority-right information.",
+      inputSchema: {
+        applicationNumber: applicationNumberSchema.describe("Japan trademark application number (10 digits)")
+      },
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ applicationNumber }) =>
+      buildToolResult(
+        "get_trademark_priority_right_app_info",
+        `/trademark/v1/priority_right_app_info/${applicationNumber}`,
+        client
+      )
+  );
+
+  server.registerTool(
     "resolve_applicant_code",
     {
       title: "Resolve Applicant Code",
       description: "Resolve applicant code to name or name to applicant code using the official JPO applicant endpoints.",
       inputSchema: {
-        domain: domainSchema.describe("対象ドメイン: patent / design / trademark"),
-        lookupBy: z.enum(["name", "code"]).describe("name: 名称からコード取得 / code: コードから名称取得"),
-        value: z.string().min(1).describe("完全一致の名称、または9桁の申請人コード")
+        domain: domainSchema.describe("patent / design / trademark"),
+        lookupBy: z.enum(["name", "code"]).describe("name: applicant string, code: applicant code"),
+        value: z.string().min(1).describe("Applicant name or 9-digit applicant code")
       },
       annotations: {
         readOnlyHint: true
@@ -310,8 +600,8 @@ export function registerJpoTools(server: McpServer, client: JpoClient): void {
       title: "Get J-PlatPat Permalink",
       description: "Resolve the official J-PlatPat fixed address for a patent, design, or trademark application.",
       inputSchema: {
-        domain: domainSchema.describe("対象ドメイン: patent / design / trademark"),
-        applicationNumber: applicationNumberSchema.describe("西暦4桁 + 0埋め6桁の出願番号")
+        domain: domainSchema.describe("patent / design / trademark"),
+        applicationNumber: applicationNumberSchema.describe("Japan application number (10 digits)")
       },
       annotations: {
         readOnlyHint: true

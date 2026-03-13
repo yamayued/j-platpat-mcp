@@ -36,15 +36,29 @@ The current scaffold exposes these MCP tools:
 
 - `lookup_number_relation`
 - `get_patent_progress`
+- `get_patent_progress_simple`
 - `get_patent_citations`
 - `get_patent_documents`
 - `get_patent_registration`
+- `get_patent_divisional_app_info`
+- `get_patent_family`
+- `get_patent_family_list`
+- `get_patent_global_cite_class`
+- `get_patent_global_doc_list`
+- `get_patent_global_document`
+- `get_patent_jp_document`
+- `get_patent_pct_national_phase_application_number`
+- `get_patent_priority_right_app_info`
 - `get_design_progress`
+- `get_design_progress_simple`
 - `get_design_registration`
 - `get_design_documents`
+- `get_design_priority_right_app_info`
 - `get_trademark_progress`
+- `get_trademark_progress_simple`
 - `get_trademark_registration`
 - `get_trademark_documents`
+- `get_trademark_priority_right_app_info`
 - `resolve_applicant_code`
 - `get_jplatpat_permalink`
 
@@ -268,6 +282,8 @@ If you plan to publish a third-party SaaS or multi-tenant service, review the JP
 
 ## Validation Status
 
+This repository has not yet been verified in a live production JPO API environment.
+
 What has been validated locally:
 
 - `npm run check`
@@ -286,7 +302,7 @@ What still needs a real JPO account:
 
 - Add bulk-data ingestion for `特許情報標準データ` / download service snapshots
 - Build a separate search index layer for natural-language and exploratory workflows
-- Add design retrieval tools mirroring the current patent / trademark set
+- Add coverage for any remaining official endpoint families not in the public endpoint list
 - Add response fixtures and regression tests
 - Add optional Streamable HTTP transport for remote internal deployment
 

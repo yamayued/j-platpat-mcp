@@ -30,6 +30,11 @@ Minimum checklist:
 4. Check untracked files and make sure no private files are about to be added.
 5. Verify `.gitignore` covers local private work files.
 6. If there is any uncertainty, do not commit or push.
+7. On any public release-related change (docs, scripts, config), run a final "公開最終監査" checklist:
+   - Confirm only placeholder credentials and placeholder values remain in docs/examples.
+   - Confirm no new real customer, applicant, or filing data exists in git-tracked files.
+   - Confirm no personal/business sensitive files are newly added outside `.gitignore`.
+   - If uncertain, stop and ask a reviewer before proceeding.
 
 ## Sensitive Data Heuristics
 
@@ -48,3 +53,13 @@ Treat the following as sensitive unless explicitly confirmed public and appropri
 ## Decision Rule
 
 If you cannot confidently say "this is safe for a public GitHub repository", do not commit it.
+
+## 2026-03-13 Security Reminder
+
+For public repo safety, we should assume that every change is externally reviewable.
+Before push:
+
+- Never commit unredacted private docs, application forms, IDs, phone numbers, addresses, account numbers, or screenshots containing them.
+- Do not commit personal environment variable files (including `.env`, `.env.local` variants).
+- Keep `package-lock.json` aligned with source changes before release, and ensure no private file appears only by transitive side effects.
+- If another person requests code review, share only redacted snippets and keep raw sensitive artifacts outside the repo.
